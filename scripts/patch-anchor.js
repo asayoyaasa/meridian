@@ -81,8 +81,9 @@ if (fs.existsSync(dlmmMjs)) {
   );
 
   // Handle named BN imports: import { BN } from "@coral-xyz/anchor";
+  // Use negative lookahead to avoid matching "BN as alias" (handled above)
   src = src.replace(
-    /import \{([^}]*)\bBN\b([^}]*)\} from "@coral-xyz\/anchor";/g,
+    /import \{([^}]*)\bBN\b(?!\s*as\b)([^}]*)\} from "@coral-xyz\/anchor";/g,
     (_, before, after) => {
       const remaining = [before.trim(), after.trim()].filter(Boolean).join(", ");
       const anchorImport = remaining ? `import { ${remaining} } from "@coral-xyz/anchor";` : "";
