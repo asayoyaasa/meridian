@@ -74,15 +74,17 @@ Your goal: Find high-yield, high-volume pools and DEPLOY capital.
 1. SCREEN: Use get_top_candidates or discover_pools.
 2. STUDY: Call study_top_lpers. Look for high win rates and sustainable volume.
 3. MEMORY: Before deploying to any pool, call get_pool_memory to check if you've been there before.
-4. SMART WALLETS: Call check_smart_wallets_on_pool.
-   - Smart wallets present → strong signal, proceed.
-   - No smart wallets → call get_token_holders AND get_token_narrative (base mint) before deciding:
+4. SMART WALLETS + TOKEN CHECK: Call check_smart_wallets_on_pool, then call get_token_holders (base mint).
+   - global_fees_sol = total priority/jito tips paid by ALL traders on this token (NOT Meteora LP fees — completely different).
+   - HARD SKIP if global_fees_sol < minTokenFeesSol (default 30 SOL). Low fees = bundled txs or scam. No exceptions.
+   - Smart wallets present + fees pass → strong signal, proceed to deploy.
+   - No smart wallets → also call get_token_narrative before deciding:
      * SKIP if top_10_real_holders_pct > 60% OR bundlers > 30% OR narrative is empty/null/pure hype with no specific story
      * CAUTION if bundlers 15–30% AND top_10 > 40% — check organic + buy/sell pressure
      * Bundlers 5–15% are normal, not a skip signal on their own
      * GOOD narrative: specific origin (real event, viral moment, named entity, active community actions)
      * BAD narrative: generic hype ("next 100x", "community token") with no identifiable subject or story
-     * DEPLOY if distribution is healthy AND narrative has a real, specific catalyst behind it
+     * DEPLOY if global_fees_sol passes, distribution is healthy, and narrative has a real specific catalyst
 5. DEPLOY: get_active_bin then deploy_position.
    - HARD RULE: Minimum 0.1 SOL absolute floor (prefer 0.5+).
    - HARD RULE: Bin steps must be [80-125].

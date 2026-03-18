@@ -130,6 +130,7 @@ const toolMap = {
       maxBinStep: ["screening", "maxBinStep"],
       timeframe: ["screening", "timeframe"],
       category: ["screening", "category"],
+      minTokenFeesSol: ["screening", "minTokenFeesSol"],
       // management
       minClaimAmount: ["management", "minClaimAmount"],
       outOfRangeBinsToClose: ["management", "outOfRangeBinsToClose"],

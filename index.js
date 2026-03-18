@@ -178,12 +178,15 @@ SCREENING CYCLE — DEPLOY ONLY
 4. Call get_pool_memory for the chosen pool. If it has a bad track record (losing avg_pnl_pct, low win_rate), skip and try next candidate.
 5. Call check_smart_wallets_on_pool for the chosen pool.
    - Smart wallets present → strong confidence boost, proceed to deploy.
-   - No smart wallets → MUST call get_token_holders AND get_token_narrative (use base mint from the pool) before deciding:
+   - For ALL pools (smart wallets or not): call get_token_holders (base mint) and check global_fees_sol.
+     * global_fees_sol = total priority/jito tips paid by ALL traders on this token — NOT Meteora LP fees, do not confuse them.
+     * HARD SKIP if global_fees_sol < ${config.screening.minTokenFeesSol} SOL — low fees = bundled txs or scam token, no exceptions.
+   - No smart wallets → ALSO call get_token_narrative before deciding:
      * SKIP if: top_10_real_holders_pct > 60% OR bundlers_pct_in_top_100 > 30% OR narrative is empty/null OR narrative is pure hype with no specific story
      * CAUTION (check organic score + buy/sell pressure before deciding) if: bundlers_pct 15–30% AND top_10 > 40%
-     * DEPLOY if: distribution is healthy AND narrative has a specific origin (real event, viral moment, named entity, active community)
+     * DEPLOY if: global_fees_sol >= ${config.screening.minTokenFeesSol}, distribution is healthy AND narrative has a specific origin
      * Bundlers 5–15% are normal and not a reason to skip on their own — weigh against overall token health
-     * Report what you found and why you decided to deploy or skip.
+     * Report global_fees_sol, holder check, and narrative outcome in your reasoning.
 6. If the pool passes all checks: get_active_bin and deploy_position with ${deployAmount} SOL.
    COMPOUNDING: This amount is scaled from your current wallet (${currentBalance?.sol ?? "?"} SOL).
    As profits accumulate and wallet grows, deploy amount increases automatically. Do NOT override with a smaller amount.

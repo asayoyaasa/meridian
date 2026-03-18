@@ -42,6 +42,9 @@ export async function getTokenInfo({ query }) {
       organic_label: t.organicScoreLabel,
       launchpad: t.launchpad,
       graduated: !!t.graduatedPool,
+      // Global fees paid by traders (priority + jito tips) in SOL.
+      // Low value = bundled txs or scam token. Minimum threshold: ~30 SOL.
+      global_fees_sol: t.fees != null ? parseFloat(t.fees.toFixed(2)) : null,
       audit: t.audit ? {
         mint_disabled: t.audit.mintAuthorityDisabled,
         freeze_disabled: t.audit.freezeAuthorityDisabled,
@@ -222,6 +225,7 @@ export async function getTokenHolders({ mint, limit = 20 }) {
 
   return {
     mint,
+    global_fees_sol: tokenInfo?.fees != null ? parseFloat(tokenInfo.fees.toFixed(2)) : null,
     total_fetched: holders.length,
     showing: mapped.length,
     top_10_real_holders_pct: top10Pct.toFixed(2),
