@@ -12,6 +12,7 @@ import { registerCronRestarter } from "./tools/executor.js";
 import { startPolling, stopPolling, sendMessage, sendHTML, notifyOutOfRange, isEnabled as telegramEnabled } from "./telegram.js";
 import { generateBriefing } from "./briefing.js";
 import { getLastBriefingDate, setLastBriefingDate } from "./state.js";
+import { getActiveStrategy } from "./strategy-library.js";
 
 log("startup", "DLMM LP Agent starting...");
 log("startup", `Mode: ${process.env.DRY_RUN === "true" ? "DRY RUN" : "LIVE"}`);
@@ -169,9 +170,23 @@ REPORT FORMAT (Strictly follow this for each position):
       const deployAmount = currentBalance ? computeDeployAmount(currentBalance.sol) : config.management.deployAmountSol;
       log("cron", `Computed deploy amount: ${deployAmount} SOL (wallet: ${currentBalance?.sol ?? "?"} SOL)`);
 
+      // Load active strategy
+      const activeStrategy = getActiveStrategy();
+      const strategyBlock = activeStrategy ? `
+ACTIVE STRATEGY: ${activeStrategy.name} (by ${activeStrategy.author})
+Apply these criteria during token selection and deployment:
+- LP Type: ${activeStrategy.lp_strategy}
+- Token: ${JSON.stringify(activeStrategy.token_criteria)}
+- Entry: ${JSON.stringify(activeStrategy.entry)}
+- Range: ${JSON.stringify(activeStrategy.range)}
+- Exit: ${JSON.stringify(activeStrategy.exit)}
+- Best for: ${activeStrategy.best_for}
+Deviate from this strategy only if the token clearly doesn't match — explain why in your report.
+` : `No active strategy set — use default bid_ask with standard settings.`;
+
       const { content } = await agentLoop(`
 SCREENING CYCLE — DEPLOY ONLY
-
+${strategyBlock}
 1. get_my_positions first. Only proceed if positions < ${config.risk.maxPositions}.
 2. get_wallet_balance. Proceed if SOL >= ${config.management.minSolToOpen}.
 3. get_top_candidates, pick the best one, and call study_top_lpers.
