@@ -15,7 +15,7 @@ import { getLastBriefingDate, setLastBriefingDate } from "./state.js";
 import { getActiveStrategy } from "./strategy-library.js";
 import { recordPositionSnapshot, recallForPool } from "./pool-memory.js";
 import { checkSmartWalletsOnPool } from "./smart-wallets.js";
-import { getTokenHolders, getTokenNarrative } from "./tools/token.js";
+import { getTokenHolders, getTokenNarrative, getTokenInfo } from "./tools/token.js";
 
 log("startup", "DLMM LP Agent starting...");
 log("startup", `Mode: ${process.env.DRY_RUN === "true" ? "DRY RUN" : "LIVE"}`);
@@ -222,26 +222,33 @@ REPORT FORMAT (one per position):
       const candidates = topCandidates?.candidates || topCandidates?.pools || [];
 
       const candidateBlocks = await Promise.all(
-        candidates.slice(0, 3).map(async (pool) => {
+        candidates.slice(0, 5).map(async (pool) => {
           const mint = pool.base?.mint;
-          const [smartWallets, holders, narrative, poolMemory] = await Promise.allSettled([
+          const [smartWallets, holders, narrative, tokenInfo, poolMemory] = await Promise.allSettled([
             checkSmartWalletsOnPool({ pool_address: pool.pool }),
             mint ? getTokenHolders({ mint, limit: 10 }) : Promise.resolve(null),
             mint ? getTokenNarrative({ mint }) : Promise.resolve(null),
+            mint ? getTokenInfo({ query: mint }) : Promise.resolve(null),
             Promise.resolve(recallForPool(pool.pool)),
           ]);
 
-          const sw    = smartWallets.status === "fulfilled" ? smartWallets.value : null;
-          const h     = holders.status === "fulfilled" ? holders.value : null;
-          const n     = narrative.status === "fulfilled" ? narrative.value : null;
-          const mem   = poolMemory.value;
+          const sw   = smartWallets.status === "fulfilled" ? smartWallets.value : null;
+          const h    = holders.status === "fulfilled" ? holders.value : null;
+          const n    = narrative.status === "fulfilled" ? narrative.value : null;
+          const ti   = tokenInfo.status === "fulfilled" ? tokenInfo.value?.results?.[0] : null;
+          const mem  = poolMemory.value;
+
+          const momentum = ti?.stats_1h
+            ? `1h: price${ti.stats_1h.price_change >= 0 ? "+" : ""}${ti.stats_1h.price_change}%, buyers=${ti.stats_1h.buyers}, net_buyers=${ti.stats_1h.net_buyers}`
+            : null;
 
           // Build compact block
           const lines = [
             `POOL: ${pool.name} (${pool.pool})`,
-            `  metrics: bin_step=${pool.bin_step}, fee_tvl=${pool.fee_active_tvl_ratio}, vol=$${pool.volume_window}, tvl=$${pool.active_tvl}, organic=${pool.organic_score}`,
+            `  metrics: bin_step=${pool.bin_step}, fee_pct=${pool.fee_pct}%, fee_tvl=${pool.fee_active_tvl_ratio}, vol=$${pool.volume_window}, tvl=$${pool.active_tvl}, volatility=${pool.volatility}, mcap=$${pool.mcap}, organic=${pool.organic_score}`,
             `  smart_wallets: ${sw?.in_pool?.length ?? 0} present${sw?.in_pool?.length ? ` → CONFIDENCE BOOST (${sw.in_pool.map(w => w.name).join(", ")})` : ""}`,
             h ? `  holders: top_10_pct=${h.top_10_real_holders_pct ?? "?"}%, bundlers_pct=${h.bundlers_pct_in_top_100 ?? "?"}%, global_fees_sol=${h.global_fees_sol ?? "?"}` : `  holders: fetch failed`,
+            momentum ? `  momentum: ${momentum}` : null,
             n?.narrative ? `  narrative: ${n.narrative.slice(0, 120)}` : `  narrative: none`,
             mem ? `  memory: ${mem}` : null,
           ].filter(Boolean);
